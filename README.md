@@ -85,6 +85,26 @@ Follow `coolify-setup-notes.md`. The non-default settings that matter:
 - Point `stg.yourdomain.com` at the VPS, deploy, smoke-test.
 - Follow `cutover-runbook.md` for the DNS flip + post-cutover cleanup.
 
+### 6. (Optional) Drop host-side `artisan` wrapper per app
+
+PHP lives inside the container, not on the host, so `cd /opt/<client>-apps/<app> && php artisan …` won't work directly. Use the wrapper template:
+
+```bash
+# On the VPS, once per app (find the UUID in Coolify UI):
+sed 's/APP_UUID_HERE/<resource-uuid>/' \
+  docker-templates/artisan-wrapper.sh > /opt/<client>-apps/<app>/artisan
+chmod +x /opt/<client>-apps/<app>/artisan
+chown <client>:<client> /opt/<client>-apps/<app>/artisan
+```
+
+Then from the app's bind-mount dir:
+```bash
+./artisan optimize
+./artisan --shell      # interactive shell inside the container
+```
+
+Requires docker group access (provisioned by default via `ADD_TO_DOCKER_GROUP=true`).
+
 ## Pitfalls we hit (and fixed)
 
 ### Slow builds

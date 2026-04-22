@@ -22,6 +22,12 @@ CLIENT_UID="${CLIENT_UID:-1000}"
 APPS_DIR="${APPS_DIR:-/opt/${CLIENT_NAME}-apps}"
 SSH_PUBKEY="${SSH_PUBKEY:?set SSH_PUBKEY to the public key string you want installed for SSH/SFTP access}"
 
+# If true, add the client user to the docker group so they can run
+# `docker exec` without sudo (needed for the per-app artisan wrappers).
+# Note: docker group access is root-equivalent. Leave false for a setup
+# where the client user is separate from the ops user.
+ADD_TO_DOCKER_GROUP="${ADD_TO_DOCKER_GROUP:-true}"
+
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[!]\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
@@ -72,7 +78,24 @@ fi
 chmod 600 "$AUTH_KEYS"
 chown "${CLIENT_NAME}:${CLIENT_NAME}" "$AUTH_KEYS"
 
-# --- 4. Landing cwd on interactive shell -------------------------------------
+# --- 4. Docker group membership (optional) -----------------------------------
+if [[ "$ADD_TO_DOCKER_GROUP" == "true" ]]; then
+  if getent group docker >/dev/null 2>&1; then
+    if id -nG "$CLIENT_NAME" | tr ' ' '\n' | grep -qx docker; then
+      log "${CLIENT_NAME} already in docker group."
+    else
+      log "Adding ${CLIENT_NAME} to docker group (root-equivalent access)."
+      usermod -aG docker "$CLIENT_NAME"
+      warn "Active SSH sessions for ${CLIENT_NAME} must log out and back in for this to take effect."
+    fi
+  else
+    warn "docker group not found. Is Docker installed? Skipping."
+  fi
+else
+  log "Skipping docker group membership (ADD_TO_DOCKER_GROUP=false)."
+fi
+
+# --- 5. Landing cwd on interactive shell -------------------------------------
 BASHRC="${HOME_DIR}/.bashrc"
 LANDING_LINE="cd ${APPS_DIR}"
 
