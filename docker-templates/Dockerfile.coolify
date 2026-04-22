@@ -21,8 +21,10 @@ RUN deluser www-data \
  && addgroup -g 1000 www-data \
  && adduser -u 1000 -G www-data -s /bin/sh -D www-data
 
-COPY docker/nginx.conf       /etc/nginx/nginx.conf
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/nginx.conf          /etc/nginx/nginx.conf
+COPY docker/supervisord.conf    /etc/supervisor/conf.d/supervisord.conf
+COPY docker/php/opcache.ini     /usr/local/etc/php/conf.d/zz-opcache.ini
+COPY docker/php/fpm-pool.conf   /usr/local/etc/php-fpm.d/zz-pool.conf
 
 RUN sed -i 's|^user = .*|user = www-data|'   /usr/local/etc/php-fpm.d/www.conf \
  && sed -i 's|^group = .*|group = www-data|' /usr/local/etc/php-fpm.d/www.conf \

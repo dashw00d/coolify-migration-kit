@@ -18,6 +18,13 @@ mkdir -p storage/app/public storage/framework/sessions storage/framework/views \
          storage/framework/cache storage/logs database
 chown -R www-data:www-data storage database
 
+# SQLite WAL mode — persistent per-DB setting. Improves read concurrency
+# during writes (Livewire apps that issue many small reads benefit most).
+# No-op if already WAL. Creates sidecar -wal and -shm files — expected.
+for dbf in storage/database.sqlite database/database.sqlite; do
+  [ -f "$dbf" ] && $AS_WEB sqlite3 "$dbf" 'PRAGMA journal_mode=WAL;' >/dev/null 2>&1 || true
+done
+
 # Laravel warmup — cache against the baked-in config/routes/views.
 # storage:link is idempotent; only needed if someone wiped public/storage.
 $AS_WEB php artisan storage:link 2>/dev/null || true

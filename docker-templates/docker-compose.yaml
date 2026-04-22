@@ -18,6 +18,15 @@ services:
     restart: unless-stopped
     expose:
       - "80"
+    # Cap the container so a runaway process (leaked worker, etc.) can't
+    # eat every core / all RAM on the VPS. Sizing assumes ~20 PHP-FPM
+    # workers × ~50 MB + headroom for nginx / supervisor / scheduler.
+    # Tune down on a small VPS, up on a bigger one.
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1536M
     volumes:
       # storage/ holds uploads, logs, sessions, compiled views, cache.
       # Also the SQLite DB if your app puts it in storage/.
