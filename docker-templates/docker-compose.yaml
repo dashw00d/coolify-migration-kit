@@ -1,0 +1,34 @@
+# Coolify Docker Compose resource.
+#
+# Coolify reads this file and renders a container per service, wiring Traefik
+# + Let's Encrypt automatically based on the domain you set in the Coolify UI.
+#
+# Before deploying:
+#   1. Replace <client> with your client/app name in both volume paths.
+#   2. Set the branch + domain in the Coolify UI (not here).
+#   3. Paste env vars in Coolify's Environment Variables tab — mark every one
+#      as "Runtime only" (unchecks "Build time"). Otherwise they get passed as
+#      --build-arg and bust every layer of cache on every value change.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.coolify
+    restart: unless-stopped
+    expose:
+      - "80"
+    volumes:
+      # storage/ holds uploads, logs, sessions, compiled views, cache.
+      # Also the SQLite DB if your app puts it in storage/.
+      - /opt/<client>-apps/<app>/storage:/var/www/html/storage
+      # Uncomment if your Laravel app keeps SQLite in database/ (the default).
+      # - /opt/<client>-apps/<app>/database:/var/www/html/database
+    healthcheck:
+      # 127.0.0.1 (not localhost) — busybox wget on alpine prefers IPv6 ::1
+      # but nginx binds only IPv4 0.0.0.0:80, so localhost gives "connection refused".
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
