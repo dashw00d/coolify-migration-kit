@@ -25,12 +25,12 @@ for dbf in storage/database.sqlite database/database.sqlite; do
   [ -f "$dbf" ] && $AS_WEB sqlite3 "$dbf" 'PRAGMA journal_mode=WAL;' >/dev/null 2>&1 || true
 done
 
-# Laravel warmup — cache against the baked-in config/routes/views.
+# Laravel warmup. `artisan optimize` runs config:cache + route:cache +
+# view:cache + event:cache in one shot — without it, Laravel 12 noticeably
+# lags on first request per route while it compiles on the fly.
 # storage:link is idempotent; only needed if someone wiped public/storage.
 $AS_WEB php artisan storage:link 2>/dev/null || true
-$AS_WEB php artisan config:cache
-$AS_WEB php artisan route:cache  || true
-$AS_WEB php artisan view:cache   || true
+$AS_WEB php artisan optimize
 
 # Opt-in migrations. Default OFF — flip AUTO_MIGRATE=true in Coolify env for
 # one deploy to apply pending migrations, then set it back to false.
